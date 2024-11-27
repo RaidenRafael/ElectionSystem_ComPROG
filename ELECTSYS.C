@@ -39,6 +39,7 @@ int authenticate(const char *fileName, char *username, char *password);
 int main() {
 	int choice;
 	do {
+		clrscr();
 		printf("[Herta Systems - Election System]\n");
 		printf("1: Administration Login\n");
 		printf("2: Voter Login\n");
@@ -48,10 +49,10 @@ int main() {
 		scanf("%d", &choice);
 
 		switch (choice) {
-			case 1: adminMenu(); break;
-			case 2: voterMenu(); break;
-			case 3: candidateMenu(); break;
-			case 4: printf("Herta Systems Is Now Terminating The Program. Goodbye!\n"); break;
+			case 1: clrscr(); adminMenu(); break;
+			case 2: clrscr(); voterMenu(); break;
+			case 3: clrscr(); candidateMenu(); break;
+			case 4: clrscr(); printf("Herta Systems Is Now Terminating The Program. Goodbye!\nPress any Key To Exit Program"); getch();
 			default: printf("Invalid Choice. Please Try again.\n");
 		}
 	} while (choice != 4);
@@ -73,10 +74,10 @@ void adminMenu() {
 		scanf("%d", &choice);
 
 		switch (choice) {
-			case 1: addCandidate(); break;
-			case 2: addVoter(); break;
-			case 3: viewResults(); break;
-			case 4: clearSystem(); break;
+			case 1: clrscr(); addCandidate(); break;
+			case 2: clrscr(); addVoter(); break;
+			case 3: clrscr(); viewResults(); break;
+			case 4: clrscr(); clearSystem(); break;
 			case 5: break;
 			default: printf("Invalid Choice. Please Try again\n");
 		}
@@ -92,9 +93,9 @@ void addCandidate() {
 		return;
 	}
 	printf("Please Enter Candidate Username: ");
-	scanf("%19s", c.username);
+	scanf(" %19s", c.username);
 	printf("Please Enter Candidate Password: ");
-	scanf("%19s", c.password);
+	scanf(" %19s", c.password);
 	c.votes = 0;
 	fwrite(&c, sizeof(Candidate), 1, file);
 	fclose(file);
@@ -126,9 +127,9 @@ void voterMenu() {
 	char username[30], password[20];
 	printf("[Herta Systems - Voters login]\n");
 	printf("Please Enter Username Of Voter: ");
-	scanf("%s", username);
+	scanf(" %19s", username);
 	printf("Please Enter Password Of Voter: ");
-	scanf("%s", password);
+	scanf(" %19s", password);
 
 	if (authenticate(VOTER_FILE, username, password)) {
 		printf("Usrname And Passwrd Has Been Accepted!, Welcome! %s!\n", username);
@@ -305,15 +306,27 @@ void viewResults() {
 void clearSystem() {
 	char confirm;
 	printf("[System]: Are You Sure You Want To Clear The System? (y/n): ");
-	scanf("%c", &confirm);
+	//scanf("%c", &confirm);
+	fflush(stdin);
+	confirm = getchar();
 
-	if (confirm == 'y' || confirm == 'Y') {
-		remove(CANDIDATE_FILE);
-		remove(VOTER_FILE);
-		remove(LOG_FILE);
-		printf("System Has Been Cleared!\n");
-		logAction("System Was Cleared By Administrator");
-	} else {
-		printf("System Clear Operation Was Canceled.\n");
+	switch (confirm) {
+		case 'y':
+		case 'Y':
+			remove(CANDIDATE_FILE);
+			remove(VOTER_FILE);
+			remove(LOG_FILE);
+			printf("System Has Been Cleared!\n");
+			logAction("System Was Cleared By Administratior");
+			break;
+
+		case 'n':
+		case 'N':
+			printf("System Clear Operation Was Canceled\n");
+			break;
+
+		default:
+			printf("\nInvalid Input, Operation Canceled\n");
+			break;
 	}
 }
