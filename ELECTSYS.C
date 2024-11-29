@@ -17,8 +17,8 @@ typedef struct {
 } Voter;
 
 //File Library (IMPORTANT!)
-#define CANDIDATE_FILE "candidates.dat"
-#define VOTER_FILE "voters.dat"
+#define CANDIDATE_FILE "candidat.dat"
+#define VOTER_FILE "vote.dat"
 #define LOG_FILE "logs.dat"
 
 //Functionalities Prototypes (REQUIRED!)
@@ -33,6 +33,7 @@ void runoffElection();
 void logAction(const char *action);
 void clearSystem();
 void listCandidates();
+void debugCandidateFile();
 int authenticate(const char *fileName, char *username, char *password);
 
 //Main Functionality Of Entire Program
@@ -60,9 +61,41 @@ int main() {
 	return 0;
 }
 
+//AdminLogin Credentials
+#define ADMIN_USERNAME "admin"
+#define ADMIN_PASSWORD "admin"
+
+//AdminLogin Main Function
+int adminLogin() {
+	char username[30], password[30];
+
+	printf("[Herta Systems - Administration Login]\n");
+	printf("Username: ");
+	scanf(" %29s", username);
+	printf("Password: ");
+	scanf(" %29s", password);
+
+	if (strcmp(username, ADMIN_USERNAME) == 0 && strcmp(password, ADMIN_PASSWORD) == 0) {
+		printf("\n[Security]: Login Sucessful!. Welcome Administrator\n\nPress Any Key To Continue...\n\n");
+		getch();
+		clrscr();
+		return 1;
+	} else {
+		printf("\n\n[Security]: Invalid Credentials. Access Denied\n\nPress Any key To Continue...\n");
+		getch();
+		return 0;
+	}
+}
+
+
 //Administration Menu (Void Prototype Reqirements)
 void adminMenu() {
 	int choice;
+
+	if (!adminLogin()) {
+		return;
+	}
+
 	do {
 		printf("[Herta Systems - Administration Menu]\n");
 		printf("1: Add Candidate\n");
@@ -79,6 +112,7 @@ void adminMenu() {
 			case 3: clrscr(); viewResults(); break;
 			case 4: clrscr(); clearSystem(); break;
 			case 5: break;
+			case 6: clrscr(); debugCandidateFile(); break;
 			default: printf("Invalid Choice. Please Try again\n");
 		}
 	} while (choice != 5);
@@ -112,9 +146,9 @@ void addVoter() {
 		return;
 	}
 	printf("Please Enter Voter Username: ");
-	scanf("%s", v.username);
-	printf("Pl2ease Enter Voter Password: ");
-	scanf("%s", v.password);
+	scanf(" %29s", v.username);
+	printf("Please Enter Voter Password: ");
+	scanf(" %19s", v.password);
 	v.hasVoted = 0;
 	fwrite(&v, sizeof(Voter), 1, file);
 	fclose(file);
@@ -132,10 +166,12 @@ void voterMenu() {
 	scanf(" %19s", password);
 
 	if (authenticate(VOTER_FILE, username, password)) {
+		clrscr();
 		printf("Usrname And Passwrd Has Been Accepted!, Welcome! %s!\n", username);
 		vote(username);
 	} else {
-		printf("Unothorized Login : Invalid Credentials!\n");
+		printf("Unothorized Login : Invalid Credentials!\nPress any Key To Continue...\n");
+		getch();
 	}
 }
 
@@ -179,72 +215,82 @@ void listCandidates() {
 
 //Main Voting Function Prototype
 void vote(char *voterUsername) {
-	FILE *file = fopen(CANDIDATE_FILE, "rb+");
+	FILE *candidateFile = fopen(CANDIDATE_FILE, "rb+");
 	FILE *voterFile = fopen(VOTER_FILE, "rb+");
 	Candidate c;
 	Voter v;
-	int candidateNum, found = 0;
-	int i;
+	int candidateNum, found = 0, i = 1;
 
-	if (!file || !voterFile) {
-		printf("Error Both Opening Candidate And Voter Master Files!\n");
+	if (!candidateFile || !voterFile) {
+		printf("Error: Could Not Open Candidate Or Voter File.\n");
 		return;
 	}
 
-	//Function Checking if Voter Has Already Voted
+	//Checking IF Voter Has already Voted
 	while (fread(&v, sizeof(Voter), 1, voterFile)) {
-		if (strcmp(v.username, voterUsername) == 0 && v.hasVoted){
-			printf("Sorry! You Have Already Voted!\n");
-			fclose(file);
-			fclose(voterFile);
-			return;
+		if (strcmp(v.username, voterUsername) == 0) {
+			if (v.hasVoted) {
+				printf("You Have Already Voted\n");
+				fclose(candidateFile);
+				fclose(voterFile);
+				return;
+			}
+			break;
 		}
 	}
-	rewind(voterFile);
 
-	//Displaying Candidates Function
+	rewind(candidateFile);
+
+	//Listing candidates function
 	printf("[Herta Systems - Candidate List]\n");
-	i = 1;
-	while (fread(&c, sizeof(Candidate), 1, file)) {
-		printf("%d. %s\n", i, c.username);
+	while (fread(&c, sizeof(Candidate), 1, candidateFile)) {
+		printf("%d, %s\n", i, c.username);
 		i++;
 	}
-	rewind(file);
 
-	//Voting Functionalities
-	printf("Please Choose A Candidate (Number): ");
+	rewind(candidateFile);
+
+	//Voting Logic Function
+	printf("Plese Choose a Candidate By Number: ");
 	scanf("%d", &candidateNum);
 
-	//Updating Candidate Votes Function
 	i = 1;
-	while (fread(&c, sizeof(Candidate), 1, file)) {
+	while(fread(&c, sizeof(Candidate), 1, candidateFile)) {
 		if (i == candidateNum) {
 			c.votes++;
-			fseek(file, -sizeof(Candidate), SEEK_CUR);
-			fwrite(&c, sizeof(Candidate), 1, file);
+			fseek(candidateFile, -sizeof(Candidate), SEEK_CUR);
+			if (fwrite(&c, sizeof(Candidate), 1, candidateFile) != 1) {
+				printf("Error: Failled to update Candidate Votes\n");
+			}
 			found = 1;
 			break;
 		}
 		i++;
 	}
 
-	//Update The Voters Record
-	if (found) {
-		while (fread(&v, sizeof(Voter), 1, voterFile)) {
-			if (strcmp(v.username, voterUsername) == 0) {
-				v.hasVoted = 1;
-				fseek(voterFile, -sizeof(Voter), SEEK_CUR);
-				fwrite(&v, sizeof(Voter), 1, voterFile);
-				break;
-			}
-		}
-		printf("Your Vote Has Been Casted Successfully!\n");
-		logAction("A Voter Has Casted A Vote!");
-	} else {
-		printf("Invalid Candidate Selection!\n");
+	if (!found) {
+		printf("Invalid Candidate Selection.\n");
+		fclose(candidateFile);
+		fclose(voterFile);
+		return;
 	}
 
-	fclose(file);
+	rewind(voterFile);
+	while (fread(&v, sizeof(Voter), 1, voterFile)) {
+		if (strcmp(v.username, voterUsername) == 0) {
+			v.hasVoted = 1;
+			fseek(voterFile, -sizeof(Voter), SEEK_CUR);
+			if (fwrite(&v, sizeof(Voter), 1, voterFile) != 1) {
+				printf("Error: Failed To update Voter Record.\n");
+			}
+			break;
+		}
+	}
+
+	printf("Voted Has been Casted\n");
+	logAction("a voter has casted a vote");
+
+	fclose(candidateFile);
 	fclose(voterFile);
 }
 
@@ -297,7 +343,26 @@ void viewResults() {
 	}
 	printf("[Herta Systems - Election Results]");
 	while (fread(&c, sizeof(Candidate), 1, file)) {
+		if (c.votes < 0 || strlen(c.username) == 0) {
+			printf("Corrupted Data Encountered");
+			break;
+		}
 		printf("%s: %d Votes\n", c.username, c.votes);
+	}
+	fclose(file);
+}
+
+//debugCandidtaeFile
+void debugCandidateFile() {
+	FILE *file = fopen(CANDIDATE_FILE, "rb");
+	Candidate c;
+	int record = 1;
+	if (!file) {
+		printf("Error Opening CandidateFile.\n");
+		return;
+	}
+	while(fread(&c, sizeof(Candidate), 1, file)) {
+		printf("Record %d: username=%s, Votes=%d\n", record++, c.username, c.votes);
 	}
 	fclose(file);
 }
@@ -316,13 +381,17 @@ void clearSystem() {
 			remove(CANDIDATE_FILE);
 			remove(VOTER_FILE);
 			remove(LOG_FILE);
-			printf("System Has Been Cleared!\n");
+			printf("System Has Been Cleared!\n\n\nPress Any Key To Continue...\n\n");
 			logAction("System Was Cleared By Administratior");
+			getch();
+			clrscr();
 			break;
 
 		case 'n':
 		case 'N':
-			printf("System Clear Operation Was Canceled\n");
+			printf("System Clear Operation Was Canceled\n\nPress Any Key To Continue...\n\n");
+			getch();
+			clrscr();
 			break;
 
 		default:
