@@ -38,19 +38,28 @@ void loadingScreen();
 
 // Main Function
 int main() {
+    char input[10]
     int choice;
 	loadingScreen();
     do {
 		clrscr();
 		printf("==[X][X][X][X][X][X][X][X][X][X][X][X][X][X][X][X][X][X][X][X][X][X][X][X][X]==");
         printf("\n");
-		printf("			[Herta Systems - Election System]\n");
+		printf("		[Herta Systems - Election System]\n");
         printf("			1: Admin Login\n");
         printf("			2: Voter Login\n");
         printf("			3: Candidate Menu\n");
         printf("			4: Exit\n");
         printf("\n\nEnter your choice: ");
         scanf("%d", &choice);
+
+	fgets(input, sizeof(input), stdin);
+        
+        if (sscanf(input, "%d", &choice) != 1) {
+            printf("Invalid input. Please enter a number.\n");
+            getch();
+            continue;
+        }
 
         switch (choice) {
             case 1: clrscr(); adminMenu(); break;
